@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FlowerpotLinkRepository extends JpaRepository<FlowerpotLink, Long> {
+    boolean existsByFlowerpotCloudId(Long flowerpotCloudId);
 }

@@ -27,7 +27,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
             throw new ValidationException("Invalid flowerpotCloudId");
 
         }
-        if (flowerpotLinkRepository.existsById(command.flowerpotCloudId())) {
+        if (flowerpotLinkRepository.existsByFlowerpotCloudId(command.flowerpotCloudId())) {
             throw new ValidationException("FlowerpotLink already exists");
         }
 

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @CrossOrigin(origins = "**", maxAge = 3600)
 @RestController
-@RequestMapping("/flowerpot/links")
+@RequestMapping("/api/v1/flowerpot/links")
 public class FlowerpotLinkController {
     private final FlowerpotLinkCommandService flowerpotLinkCommandService;
     private final FlowerpotLinkQueryService flowerpotLinkQueryService;
@@ -39,5 +39,16 @@ public class FlowerpotLinkController {
         }
         var flowerpotLinkResource = FlowerpotLinkResourceFromEntityAssembler.toResourceFromEntity(flowerpotLink.get());
         return new ResponseEntity<>(flowerpotLinkResource, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{flowerpotLinkId}")
+    public ResponseEntity<FlowerpotLinkResource> getFlowerpotLinkById(@PathVariable Long flowerpotLinkId) {
+        var getFlowerpotLinkByIdQuery = new GetFlowerpotLinkByIdQuery(flowerpotLinkId);
+        var flowerpotLink = flowerpotLinkQueryService.handle(getFlowerpotLinkByIdQuery);
+        if (flowerpotLink.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        var flowerpotLinkResource = FlowerpotLinkResourceFromEntityAssembler.toResourceFromEntity(flowerpotLink.get());
+        return new ResponseEntity<>(flowerpotLinkResource, HttpStatus.OK);
     }
 }
