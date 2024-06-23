@@ -1,21 +1,33 @@
 package com.loschiferos.ztech.transference.application.internal.commandservices;
 
 import com.loschiferos.ztech.shared.domain.exceptions.ValidationException;
+import com.loschiferos.ztech.shared.domain.resources.ExternalServiceRequest;
 import com.loschiferos.ztech.transference.domain.model.aggregates.FlowerpotLink;
 import com.loschiferos.ztech.transference.domain.model.commands.CreateFlowerpotLinkCommand;
+import com.loschiferos.ztech.transference.domain.model.commands.CreateHumiditySensorCommand;
+import com.loschiferos.ztech.transference.domain.model.commands.CreateSunlightSensorCommand;
+import com.loschiferos.ztech.transference.domain.model.commands.CreateTemperatureSensorCommand;
+import com.loschiferos.ztech.transference.domain.model.entities.HumiditySensor;
+import com.loschiferos.ztech.transference.domain.model.entities.SunlightSensor;
+import com.loschiferos.ztech.transference.domain.model.entities.TemperatureSensor;
 import com.loschiferos.ztech.transference.domain.services.FlowerpotLinkCommandService;
 import com.loschiferos.ztech.transference.infrastructure.persistance.jpa.repositories.FlowerpotLinkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.List;
 
 @Service
 public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandService {
 
     private final FlowerpotLinkRepository flowerpotLinkRepository;
+    private final RestTemplate restTemplate;
 
     @Autowired
     public FlowerpotLinkCommandServiceImpl(FlowerpotLinkRepository flowerpotLinkRepository) {
         this.flowerpotLinkRepository = flowerpotLinkRepository;
+        this.restTemplate = new RestTemplate();
     }
 
     @Override
@@ -25,7 +37,6 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
         }
         if (command.flowerpotCloudId() <= 0) {
             throw new ValidationException("Invalid flowerpotCloudId");
-
         }
         if (flowerpotLinkRepository.existsByFlowerpotCloudId(command.flowerpotCloudId())) {
             throw new ValidationException("FlowerpotLink already exists");
@@ -33,5 +44,80 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         FlowerpotLink flowerpotLink = new FlowerpotLink(command.flowerpotCloudId());
         return flowerpotLinkRepository.save(flowerpotLink).getId();
+    }
+
+    @Override
+    public void handle(CreateTemperatureSensorCommand command) {
+        FlowerpotLink flowerpotLink = flowerpotLinkRepository.findByFlowerpotCloudId(command.flowerpotCloudId())
+                .orElseGet(() -> {
+                    FlowerpotLink newFlowerpotLink = new FlowerpotLink(command.flowerpotCloudId());
+                    return flowerpotLinkRepository.save(newFlowerpotLink);
+                });
+
+        flowerpotLink.createTemperatureSensor(flowerpotLink, command.temperature());
+        flowerpotLinkRepository.save(flowerpotLink);
+
+        if (flowerpotLink.getTemperatureSensorList().getTemperatureSensors().size() >= 3) {
+            double averageTemperature = calculateAverageTemperature(flowerpotLink.getTemperatureSensorList().getTemperatureSensors());
+            sendAverageToExternalService(flowerpotLink.getFlowerpotCloudId(), 1, averageTemperature);
+            flowerpotLink.getTemperatureSensorList().clear();
+            flowerpotLinkRepository.save(flowerpotLink);
+        }
+    }
+
+    @Override
+    public void handle(CreateHumiditySensorCommand command) {
+        FlowerpotLink flowerpotLink = flowerpotLinkRepository.findByFlowerpotCloudId(command.flowerpotCloudId())
+                .orElseGet(() -> {
+                    FlowerpotLink newFlowerpotLink = new FlowerpotLink(command.flowerpotCloudId());
+                    return flowerpotLinkRepository.save(newFlowerpotLink);
+                });
+
+        flowerpotLink.createHumiditySensor(flowerpotLink, command.humidity());
+        flowerpotLinkRepository.save(flowerpotLink);
+
+        if (flowerpotLink.getHumiditySensorList().getHumiditySensors().size() >= 10) {
+            double averageHumidity = calculateAverageHumidity(flowerpotLink.getHumiditySensorList().getHumiditySensors());
+            sendAverageToExternalService(flowerpotLink.getFlowerpotCloudId(), 2, averageHumidity);
+            flowerpotLink.getHumiditySensorList().clear();
+            flowerpotLinkRepository.save(flowerpotLink);
+        }
+    }
+
+    @Override
+    public void handle(CreateSunlightSensorCommand command) {
+        FlowerpotLink flowerpotLink = flowerpotLinkRepository.findByFlowerpotCloudId(command.flowerpotCloudId())
+                .orElseGet(() -> {
+                    FlowerpotLink newFlowerpotLink = new FlowerpotLink(command.flowerpotCloudId());
+                    return flowerpotLinkRepository.save(newFlowerpotLink);
+                });
+
+        flowerpotLink.createSunlightSensor(flowerpotLink, command.sunlight());
+        flowerpotLinkRepository.save(flowerpotLink);
+
+        if (flowerpotLink.getSunlightSensorList().getSunlightSensors().size() >= 10) {
+            double averageSunlight = calculateAverageSunlight(flowerpotLink.getSunlightSensorList().getSunlightSensors());
+            sendAverageToExternalService(flowerpotLink.getFlowerpotCloudId(), 3, averageSunlight);
+            flowerpotLink.getSunlightSensorList().clear();
+            flowerpotLinkRepository.save(flowerpotLink);
+        }
+    }
+
+    private double calculateAverageTemperature(List<TemperatureSensor> sensors) {
+        return sensors.stream().mapToDouble(TemperatureSensor::getTemperature).average().orElse(0.0);
+    }
+
+    private double calculateAverageHumidity(List<HumiditySensor> sensors) {
+        return sensors.stream().mapToDouble(HumiditySensor::getHumidity).average().orElse(0.0);
+    }
+
+    private double calculateAverageSunlight(List<SunlightSensor> sensors) {
+        return sensors.stream().mapToDouble(SunlightSensor::getSunlight).average().orElse(0.0);
+    }
+
+    private void sendAverageToExternalService(Long flowerpotId, int sensorType, double averageValue) {
+        String url = "https://ztech-web-service-production.up.railway.app/api/v1/flowerpots/sensors";
+        ExternalServiceRequest request = new ExternalServiceRequest(flowerpotId, sensorType, averageValue);
+        restTemplate.postForObject(url, request, Void.class);
     }
 }

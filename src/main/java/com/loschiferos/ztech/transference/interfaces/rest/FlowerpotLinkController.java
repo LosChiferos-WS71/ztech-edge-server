@@ -1,11 +1,14 @@
 package com.loschiferos.ztech.transference.interfaces.rest;
 
+import com.loschiferos.ztech.shared.domain.exceptions.ResourceNotFoundException;
 import com.loschiferos.ztech.transference.domain.model.queries.GetFlowerpotLinkByIdQuery;
 import com.loschiferos.ztech.transference.domain.services.FlowerpotLinkCommandService;
 import com.loschiferos.ztech.transference.domain.services.FlowerpotLinkQueryService;
 import com.loschiferos.ztech.transference.interfaces.rest.resources.CreateFlowerpotLinkResource;
+import com.loschiferos.ztech.transference.interfaces.rest.resources.CreateTemperatureSensorResource;
 import com.loschiferos.ztech.transference.interfaces.rest.resources.FlowerpotLinkResource;
 import com.loschiferos.ztech.transference.interfaces.rest.transform.CreateFlowerpotLinkCommandFromResourceAssembler;
+import com.loschiferos.ztech.transference.interfaces.rest.transform.CreateTemperatureSensorCommandFromResourceAssembler;
 import com.loschiferos.ztech.transference.interfaces.rest.transform.FlowerpotLinkResourceFromEntityAssembler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -41,12 +44,19 @@ public class FlowerpotLinkController {
         return new ResponseEntity<>(flowerpotLinkResource, HttpStatus.CREATED);
     }
 
+    @PostMapping("/temperature")
+    public ResponseEntity<Void> createTemperatureSensor(@RequestBody CreateTemperatureSensorResource resource) {
+        var createTemperatureSensorCommand = CreateTemperatureSensorCommandFromResourceAssembler.toCommandFromResource(resource);
+        flowerpotLinkCommandService.handle(createTemperatureSensorCommand);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
     @GetMapping("/{flowerpotLinkId}")
     public ResponseEntity<FlowerpotLinkResource> getFlowerpotLinkById(@PathVariable Long flowerpotLinkId) {
         var getFlowerpotLinkByIdQuery = new GetFlowerpotLinkByIdQuery(flowerpotLinkId);
         var flowerpotLink = flowerpotLinkQueryService.handle(getFlowerpotLinkByIdQuery);
         if (flowerpotLink.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            throw new ResourceNotFoundException("FlowerpotLink not found");
         }
         var flowerpotLinkResource = FlowerpotLinkResourceFromEntityAssembler.toResourceFromEntity(flowerpotLink.get());
         return new ResponseEntity<>(flowerpotLinkResource, HttpStatus.OK);
