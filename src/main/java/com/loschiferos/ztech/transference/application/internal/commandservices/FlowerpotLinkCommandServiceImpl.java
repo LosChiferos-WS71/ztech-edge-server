@@ -13,6 +13,7 @@ import com.loschiferos.ztech.transference.domain.model.entities.TemperatureSenso
 import com.loschiferos.ztech.transference.domain.services.FlowerpotLinkCommandService;
 import com.loschiferos.ztech.transference.infrastructure.persistance.jpa.repositories.FlowerpotLinkRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -22,12 +23,10 @@ import java.util.List;
 public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandService {
 
     private final FlowerpotLinkRepository flowerpotLinkRepository;
-    private final RestTemplate restTemplate;
 
     @Autowired
     public FlowerpotLinkCommandServiceImpl(FlowerpotLinkRepository flowerpotLinkRepository) {
         this.flowerpotLinkRepository = flowerpotLinkRepository;
-        this.restTemplate = new RestTemplate();
     }
 
     @Override
@@ -59,7 +58,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         if (flowerpotLink.getTemperatureSensorList().getTemperatureSensors().size() >= 3) {
             double averageTemperature = calculateAverageTemperature(flowerpotLink.getTemperatureSensorList().getTemperatureSensors());
-            sendAverageToExternalService(flowerpotLink.getFlowerpotCloudId(), 1, averageTemperature);
+            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 1, averageTemperature);
             flowerpotLink.getTemperatureSensorList().clear();
             flowerpotLinkRepository.save(flowerpotLink);
         }
@@ -78,7 +77,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         if (flowerpotLink.getHumiditySensorList().getHumiditySensors().size() >= 10) {
             double averageHumidity = calculateAverageHumidity(flowerpotLink.getHumiditySensorList().getHumiditySensors());
-            sendAverageToExternalService(flowerpotLink.getFlowerpotCloudId(), 2, averageHumidity);
+            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 2, averageHumidity);
             flowerpotLink.getHumiditySensorList().clear();
             flowerpotLinkRepository.save(flowerpotLink);
         }
@@ -97,7 +96,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         if (flowerpotLink.getSunlightSensorList().getSunlightSensors().size() >= 10) {
             double averageSunlight = calculateAverageSunlight(flowerpotLink.getSunlightSensorList().getSunlightSensors());
-            sendAverageToExternalService(flowerpotLink.getFlowerpotCloudId(), 3, averageSunlight);
+            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 3, averageSunlight);
             flowerpotLink.getSunlightSensorList().clear();
             flowerpotLinkRepository.save(flowerpotLink);
         }
@@ -115,9 +114,21 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
         return sensors.stream().mapToDouble(SunlightSensor::getSunlight).average().orElse(0.0);
     }
 
-    private void sendAverageToExternalService(Long flowerpotId, int sensorType, double averageValue) {
+    private void sendToExternalService(Long flowerpotId, int type, double value) {
         String url = "https://ztech-web-service-production.up.railway.app/api/v1/flowerpots/sensors";
-        ExternalServiceRequest request = new ExternalServiceRequest(flowerpotId, sensorType, averageValue);
-        restTemplate.postForObject(url, request, Void.class);
+        RestTemplate restTemplate = new RestTemplate();
+
+        ExternalServiceRequest request = new ExternalServiceRequest(flowerpotId, type, value);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<ExternalServiceRequest> entity = new HttpEntity<>(request, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
+
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new RuntimeException("Failed to send data to external service");
+        }
     }
 }
