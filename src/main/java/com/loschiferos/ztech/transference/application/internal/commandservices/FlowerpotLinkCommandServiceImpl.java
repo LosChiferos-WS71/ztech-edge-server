@@ -56,7 +56,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
         flowerpotLink.createTemperatureSensor(flowerpotLink, command.temperature());
         flowerpotLinkRepository.save(flowerpotLink);
 
-        if (flowerpotLink.getTemperatureSensorList().getTemperatureSensors().size() >= 3) {
+        if (flowerpotLink.getTemperatureSensorList().getTemperatureSensors().size() >= 10) {
             double averageTemperature = calculateAverageTemperature(flowerpotLink.getTemperatureSensorList().getTemperatureSensors());
             sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 1, averageTemperature);
             flowerpotLink.getTemperatureSensorList().clear();
