@@ -4,12 +4,8 @@ import com.loschiferos.ztech.shared.domain.exceptions.ResourceNotFoundException;
 import com.loschiferos.ztech.transference.domain.model.queries.GetFlowerpotLinkByIdQuery;
 import com.loschiferos.ztech.transference.domain.services.FlowerpotLinkCommandService;
 import com.loschiferos.ztech.transference.domain.services.FlowerpotLinkQueryService;
-import com.loschiferos.ztech.transference.interfaces.rest.resources.CreateFlowerpotLinkResource;
-import com.loschiferos.ztech.transference.interfaces.rest.resources.CreateTemperatureSensorResource;
-import com.loschiferos.ztech.transference.interfaces.rest.resources.FlowerpotLinkResource;
-import com.loschiferos.ztech.transference.interfaces.rest.transform.CreateFlowerpotLinkCommandFromResourceAssembler;
-import com.loschiferos.ztech.transference.interfaces.rest.transform.CreateTemperatureSensorCommandFromResourceAssembler;
-import com.loschiferos.ztech.transference.interfaces.rest.transform.FlowerpotLinkResourceFromEntityAssembler;
+import com.loschiferos.ztech.transference.interfaces.rest.resources.*;
+import com.loschiferos.ztech.transference.interfaces.rest.transform.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +44,20 @@ public class FlowerpotLinkController {
     public ResponseEntity<Void> createTemperatureSensor(@RequestBody CreateTemperatureSensorResource resource) {
         var createTemperatureSensorCommand = CreateTemperatureSensorCommandFromResourceAssembler.toCommandFromResource(resource);
         flowerpotLinkCommandService.handle(createTemperatureSensorCommand);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/humidity")
+    public ResponseEntity<Void> createHumiditySensor(@RequestBody CreateHumiditySensorResource resource) {
+        var createHumiditySensorCommand = CreateHumiditySensorCommandFromResourceAssembler.toCommandFromResource(resource);
+        flowerpotLinkCommandService.handle(createHumiditySensorCommand);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/sunlight")
+    public ResponseEntity<Void> createSunlightSensor(@RequestBody CreateSunlightSensorResource resource) {
+        var createSunlightSensorCommand = CreateSunlightSensorCommandFromResourceAssembler.toCommandFromResource(resource);
+        flowerpotLinkCommandService.handle(createSunlightSensorCommand);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
