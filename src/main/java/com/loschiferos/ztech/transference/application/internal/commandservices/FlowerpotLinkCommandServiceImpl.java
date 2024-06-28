@@ -58,7 +58,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         if (flowerpotLink.getTemperatureSensorList().getTemperatureSensors().size() >= 10) {
             double averageTemperature = calculateAverageTemperature(flowerpotLink.getTemperatureSensorList().getTemperatureSensors());
-            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 1, averageTemperature);
+            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 0, averageTemperature);
             flowerpotLink.getTemperatureSensorList().clear();
             flowerpotLinkRepository.save(flowerpotLink);
         }
@@ -77,7 +77,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         if (flowerpotLink.getHumiditySensorList().getHumiditySensors().size() >= 10) {
             double averageHumidity = calculateAverageHumidity(flowerpotLink.getHumiditySensorList().getHumiditySensors());
-            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 2, averageHumidity);
+            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 1, averageHumidity);
             flowerpotLink.getHumiditySensorList().clear();
             flowerpotLinkRepository.save(flowerpotLink);
         }
@@ -96,7 +96,7 @@ public class FlowerpotLinkCommandServiceImpl implements FlowerpotLinkCommandServ
 
         if (flowerpotLink.getSunlightSensorList().getSunlightSensors().size() >= 10) {
             double averageSunlight = calculateAverageSunlight(flowerpotLink.getSunlightSensorList().getSunlightSensors());
-            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 3, averageSunlight);
+            sendToExternalService(flowerpotLink.getFlowerpotCloudId(), 2, averageSunlight);
             flowerpotLink.getSunlightSensorList().clear();
             flowerpotLinkRepository.save(flowerpotLink);
         }
